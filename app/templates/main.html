@@ -1,0 +1,14 @@
+<!doctype html>
+<title>longToShort</title>
+<link rel=stylesheet type=text/css href="{{url_for('static',filename='style.css')}}">
+{% if error %} <p class=error><strong>Error:</strong> {{ error}}{%endif%}
+<form action="{{url_for('input_long')}}" method=post>
+    <dl>
+        <dt>URL:
+        <dd><input type=text name=url>
+        <dd><input type=submit value=transform>
+    </dl>
+</form>
+{%if shorted %}
+    <h1>{{shorted}}</h1>
+{% endif %}

@@ -22,29 +22,38 @@ def input_long():
     error = None
     shorted = None
     if request.method =='POST':
+
         url = str.encode(request.form.get('url'))
         if url==None:
             error = 'URL을 입력해 주십시오.'
         else:
             url = checkURL(url)
-            if url != None:
-                shorted = encodeURL(url)
-            else:
-                shorted = '다시 입력해주십시오'
 
-        cur = g.db.excute('select long from entries where long=?',(url))
-        if cur.fetchone() ==None:
-            cur.execute('insert into entries(long) values(?)',
-                        (base64.urlsafe_b64encode(url)))
+            if url == None:
+                error = 'URL이 형식에 맞는지 확인해 주십시오.'
+                return render_template('main.html',error=error,shorted=shorted)
+
+            cur = g.db.cursor().execute('select id from entries where long=?',[base64.urlsafe_b64encode(url)])
+            id = cur.fetchone()[0]
+
+            if id ==None:
+                cur.execute('insert into entries(long) values(?)',
+                            [base64.urlsafe_b64encode(url)])
+                g.db.commit()
+                id = cur.lastrowid
+
+            shorted ='localhost:5000/'+ encodeURL(id)
+
+
     return render_template('main.html',error=error,shorted=shorted)
 
 @app.route('/<url>')
 def redirectForShort(url):
     decoded = decodeURL(url)
-    cur = g.db.excute('select long from entries where id=?',(decoded))
+    cur = g.db.cursor().execute('select long from entries where id=?',[decoded])
 
     try:
-        long = cur.fetchone()
+        long = cur.fetchone()[0]
         if long is not None:
             url = base64.urlsafe_b64decode(long)
     except Exception as e:
@@ -101,5 +110,4 @@ def init_db():
         db.commit()
 
 if __name__ == '__main__':
-    init_db()
     app.run()

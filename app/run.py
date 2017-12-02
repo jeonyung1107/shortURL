@@ -3,10 +3,11 @@ from contextlib import closing
 from urllib.parse import urlparse
 import os
 import sqlite3
-import string
-from string import ascii_lowercase,ascii_uppercase
+from string import digits, ascii_lowercase,ascii_uppercase
 from flask import Flask,request,g,url_for,abort,render_template,flash, redirect
+import validators
 import base64
+import random
 
 app = Flask(__name__)
 app.config.from_object(__name__)
@@ -34,13 +35,15 @@ def input_long():
                 return render_template('main.html',error=error,shorted=shorted)
 
             cur = g.db.cursor().execute('select id from entries where long=?',[base64.urlsafe_b64encode(url)])
-            id = cur.fetchone()[0]
+            id = cur.fetchone()
 
             if id ==None:
                 cur.execute('insert into entries(long) values(?)',
                             [base64.urlsafe_b64encode(url)])
                 g.db.commit()
                 id = cur.lastrowid
+            else:
+                id = id[0]
 
             shorted ='localhost:5000/'+ encodeURL(id)
 
@@ -60,17 +63,28 @@ def redirectForShort(url):
         print(e)
     return redirect(url)
 
+@app.route('/test/<url>')
+def url_test(url):
+    cur = g.db.cursor().execute('select short from entries where long=?',[url])
+
+    short = cur.fetchone()
+    if short is not None:
+        short = short[0]
+
+    return render_template('test.html',long=url,short = short)
+
+
 def checkURL(URL):
-    url = URL
-    if urlparse(url).netloc !='':
+    url = URL.decode('utf-8')
+    if urlparse(url).path !='' or urlparse(url).netloc !='':
         if urlparse(url).scheme=='':
             url = 'http://' + url
-        return url
+        return str.encode(url)
     else:
         return None
 
 def encodeURL(ID):
-    base = string.digits + ascii_lowercase + ascii_uppercase
+    base = digits + ascii_lowercase + ascii_uppercase
     result = ''
 
     while True:
@@ -84,7 +98,7 @@ def encodeURL(ID):
     return result
 
 def decodeURL(short):
-    base = string.digits + ascii_lowercase + ascii_uppercase
+    base = digits + ascii_lowercase + ascii_uppercase
 
     result = 0
     for i in range(len(short)):

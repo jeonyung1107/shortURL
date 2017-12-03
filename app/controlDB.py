@@ -1,21 +1,30 @@
-from string import digits ,ascii_uppercase, ascii_lowercase
-import random, base64, sqlite3
+import  sqlite3, os
 
-def makeTest():
-    urlList=[]
-    base = digits + ascii_lowercase + ascii_uppercase
-    while len(urlList) <10000:
-        urlTmp = ''
-        for i in range(20):
-            urlTmp = urlTmp + base[random.randrange(0,62)]
+dbPass = os.getcwd() + '/short.db'
 
-        urlTmp = str.encode('localhost:5000/test/'+urlTmp)
-        urlList.append([base64.urlsafe_b64encode(urlTmp)])
+def connect_db():
+    return sqlite3.connect(dbPass)
 
-    with sqlite3.connect('short.db') as conn:
-        cur = conn.cursor()
-        res = cur.executemany('insert into entries(long) values(?)',urlList)
-        conn.commit()
+def init_db():
+    '''
+    DB 생성하는 함수
+    :return:
+    '''
+    with connect_db() as db:
+        with open('schema.sql','r') as f:
+            db.cursor().executescript(f.read())
+        db.commit()
+
+def checkDB():
+    with connect_db() as db:
+        cur = db.cursor()
+        cur.execute('select * from entries')
+        res = cur.fetchall()
+        if res is None:
+            print ('nothing')
+        else:
+            print(cur.fetchall())
 
 if __name__ == '__main__':
-    makeTest()
+    init_db()
+    checkDB()
